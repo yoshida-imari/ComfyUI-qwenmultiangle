@@ -60,7 +60,7 @@ Examples:
 
 ### Original Implementation
 
-This ComfyUI node is based on [qwenmultiangle](https://github.com/jtydhr88/qwenmultiangle), a standalone web application for camera angle control.
+This ComfyUI node is based on [qwenmultiangle](https://github.com/amrrs/qwenmultiangle), a standalone web application for camera angle control.
 
 The original project was inspired by:
 - [multimodalart/qwen-image-multiple-angles-3d-camera](https://huggingface.co/spaces/multimodalart/qwen-image-multiple-angles-3d-camera) on Hugging Face Spaces
