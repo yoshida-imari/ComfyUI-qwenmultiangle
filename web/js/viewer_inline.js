@@ -748,7 +748,6 @@ export const VIEWER_HTML = `
                         img.onload = () => {
                             const tex = new THREE.Texture(img);
                             tex.needsUpdate = true;
-                            tex.encoding = THREE.sRGBEncoding;
                             planeMat.map = tex;
                             planeMat.color.set(0xffffff);
                             planeMat.needsUpdate = true;
