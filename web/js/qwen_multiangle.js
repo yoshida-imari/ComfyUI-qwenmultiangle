@@ -1,14 +1,19 @@
-import { app } from "../../../../scripts/app.js";
+import { app } from "/scripts/app.js";
+import { api } from "/scripts/api.js";
 import { VIEWER_HTML } from "./viewer_inline.js";
 
 /**
  * ComfyUI Extension for Qwen Multiangle Camera Node
  * Provides a 3D camera angle control widget
+ *
+ * Compatible with ComfyUI Nodes 2.0
  */
 app.registerExtension({
     name: "qwen.multiangle.camera",
 
-    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+    async beforeRegisterNodeDef(nodeType, nodeData, appInstance) {
+        // Use appInstance parameter for Nodes 2.0 compatibility
+        const appRef = appInstance || app;
         if (nodeData.name === "QwenMultiangleCameraNode") {
             const onNodeCreated = nodeType.prototype.onNodeCreated;
 
@@ -16,10 +21,14 @@ app.registerExtension({
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
                 const node = this;
 
+                // Fixed height for the viewer
+                const VIEWER_HEIGHT = 360;
+
                 // Create iframe for 3D viewer
                 const iframe = document.createElement("iframe");
                 iframe.style.width = "100%";
-                iframe.style.height = "100%";
+                iframe.style.height = VIEWER_HEIGHT + "px";
+                iframe.style.minHeight = VIEWER_HEIGHT + "px";
                 iframe.style.border = "none";
                 iframe.style.backgroundColor = "#0a0a0f";
                 iframe.style.borderRadius = "8px";
@@ -32,18 +41,48 @@ app.registerExtension({
 
                 iframe.addEventListener('load', () => {
                     iframe._blobUrl = blobUrl;
+                    // Apply styles to parent elements for Nodes 2.0 compatibility
+                    applyParentStyles();
                 });
+
+                // Function to apply height styles to parent elements (Nodes 2.0)
+                const applyParentStyles = () => {
+                    let parent = iframe.parentElement;
+                    let depth = 0;
+                    while (parent && depth < 5) {
+                        // Check for Nodes 2.0 container classes
+                        if (parent.classList.contains('col-span-2') ||
+                            parent.getAttribute('node-type') === 'QwenMultiangleCameraNode' ||
+                            parent.hasAttribute('modelvalue')) {
+                            parent.style.height = VIEWER_HEIGHT + "px";
+                            parent.style.minHeight = VIEWER_HEIGHT + "px";
+                        }
+                        parent = parent.parentElement;
+                        depth++;
+                    }
+                };
 
                 // Add widget
                 const widget = this.addDOMWidget("viewer", "CAMERA_3D_VIEW", iframe, {
                     getValue() { return ""; },
-                    setValue(v) { }
+                    setValue(v) { },
+                    // Nodes 2.0 specific options
+                    serialize: false
                 });
 
                 widget.computeSize = function (width) {
                     const w = width || 320;
-                    return [w, 360];
+                    return [w, VIEWER_HEIGHT];
                 };
+
+                // Set widget height explicitly
+                widget.options = widget.options || {};
+                widget.options.height = VIEWER_HEIGHT;
+
+                // Apply parent styles after DOM is ready
+                requestAnimationFrame(() => {
+                    applyParentStyles();
+                });
 
                 widget.element = iframe;
                 this._viewerIframe = iframe;
@@ -89,8 +128,12 @@ app.registerExtension({
                         if (zWidget) zWidget.value = data.zoom;
                         if (defaultPromptsWidget) defaultPromptsWidget.value = data.useDefaultPrompts || false;
 
-                        // Mark graph as changed
-                        app.graph.setDirtyCanvas(true, true);
+                        // Mark graph as changed (Nodes 2.0 compatible)
+                        if (appRef.graph?.setDirtyCanvas) {
+                            appRef.graph.setDirtyCanvas(true, true);
+                        } else if (appRef.canvas) {
+                            appRef.canvas.setDirty(true, true);
+                        }
                     }
                 };
                 window.addEventListener('message', onMessage);
