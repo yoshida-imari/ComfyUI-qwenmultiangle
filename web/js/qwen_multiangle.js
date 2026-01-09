@@ -21,14 +21,16 @@ app.registerExtension({
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
                 const node = this;
 
-                // Fixed height for the viewer
-                const VIEWER_HEIGHT = 360;
+                // Minimum and default height for the viewer
+                const MIN_VIEWER_HEIGHT = 80;
+                const DEFAULT_VIEWER_HEIGHT = 360;
+                let currentViewerHeight = DEFAULT_VIEWER_HEIGHT;
 
                 // Create iframe for 3D viewer
                 const iframe = document.createElement("iframe");
                 iframe.style.width = "100%";
-                iframe.style.height = VIEWER_HEIGHT + "px";
-                iframe.style.minHeight = VIEWER_HEIGHT + "px";
+                iframe.style.height = currentViewerHeight + "px";
+                iframe.style.minHeight = MIN_VIEWER_HEIGHT + "px";
                 iframe.style.border = "none";
                 iframe.style.backgroundColor = "#0a0a0f";
                 iframe.style.borderRadius = "8px";
@@ -42,11 +44,28 @@ app.registerExtension({
                 iframe.addEventListener('load', () => {
                     iframe._blobUrl = blobUrl;
                     // Apply styles to parent elements for Nodes 2.0 compatibility
-                    applyParentStyles();
+                    applyParentStyles(currentViewerHeight);
                 });
 
+                // Track last applied height to prevent unnecessary updates
+                let lastAppliedHeight = 0;
+
+                // Function to update iframe height
+                const updateIframeHeight = (newHeight) => {
+                    const height = Math.max(MIN_VIEWER_HEIGHT, Math.round(newHeight));
+                    // Prevent unnecessary updates
+                    if (Math.abs(height - currentViewerHeight) < 2) return;
+
+                    currentViewerHeight = height;
+                    iframe.style.height = height + "px";
+                };
+
                 // Function to apply height styles to parent elements (Nodes 2.0)
-                const applyParentStyles = () => {
+                // Only called once during initialization, not during resize
+                const applyParentStyles = (height) => {
+                    if (Math.abs(height - lastAppliedHeight) < 2) return;
+                    lastAppliedHeight = height;
+
                     let parent = iframe.parentElement;
                     let depth = 0;
                     while (parent && depth < 5) {
@@ -54,12 +73,25 @@ app.registerExtension({
                         if (parent.classList.contains('col-span-2') ||
                             parent.getAttribute('node-type') === 'QwenMultiangleCameraNode' ||
                             parent.hasAttribute('modelvalue')) {
-                            parent.style.height = VIEWER_HEIGHT + "px";
-                            parent.style.minHeight = VIEWER_HEIGHT + "px";
+                            parent.style.minHeight = MIN_VIEWER_HEIGHT + "px";
+                            // Only set height if it's not already set by Nodes 2.0
+                            if (!parent.style.height || parent.style.height === '0px') {
+                                parent.style.height = height + "px";
+                            }
                         }
                         parent = parent.parentElement;
                         depth++;
                     }
+                };
+
+                // Calculate available height for viewer based on node size
+                const calculateViewerHeight = () => {
+                    const nodeHeight = node.size?.[1] || 520;
+                    // Estimate header + other widgets height (title bar + inputs/outputs + sliders)
+                    // Approximate: header ~30px, each widget ~30px, padding ~20px
+                    const otherWidgetsCount = (node.widgets?.length || 0) - 1; // -1 for viewer widget
+                    const estimatedOverhead = 30 + (otherWidgetsCount * 30) + 40;
+                    return Math.max(MIN_VIEWER_HEIGHT, nodeHeight - estimatedOverhead);
                 };
 
                 // Add widget
@@ -70,19 +102,58 @@ app.registerExtension({
                     serialize: false
                 });
 
+                // Dynamic computeSize based on node height
                 widget.computeSize = function (width) {
                     const w = width || 320;
-                    return [w, VIEWER_HEIGHT];
+                    return [w, currentViewerHeight];
                 };
 
                 // Set widget height explicitly
                 widget.options = widget.options || {};
-                widget.options.height = VIEWER_HEIGHT;
+                widget.options.height = currentViewerHeight;
 
                 // Apply parent styles after DOM is ready
                 requestAnimationFrame(() => {
-                    applyParentStyles();
+                    applyParentStyles(currentViewerHeight);
                 });
+
+                // Handle node resize (LiteGraph)
+                const origOnResize = node.onResize;
+                node.onResize = function (size) {
+                    if (origOnResize) {
+                        origOnResize.apply(this, arguments);
+                    }
+                    const newHeight = calculateViewerHeight();
+                    updateIframeHeight(newHeight);
+                    widget.options.height = newHeight;
+                };
+
+                // Monitor parent container for Nodes 2.0 resize
+                let lastParentHeight = 0;
+                const parentObserver = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        const containerHeight = Math.round(entry.contentRect.height);
+                        // Only update if significant change (prevents circular updates)
+                        if (containerHeight >= MIN_VIEWER_HEIGHT &&
+                            Math.abs(containerHeight - lastParentHeight) > 2) {
+                            lastParentHeight = containerHeight;
+                            // Update iframe height directly without triggering parent style changes
+                            currentViewerHeight = containerHeight;
+                            iframe.style.height = containerHeight + "px";
+                        }
+                    }
+                });
+
+                // Start observing parent after DOM is ready
+                requestAnimationFrame(() => {
+                    const parent = iframe.parentElement;
+                    if (parent && (parent.classList.contains('col-span-2') || parent.hasAttribute('modelvalue'))) {
+                        parentObserver.observe(parent);
+                    }
+                });
+
+                // Store reference for cleanup
+                this._parentObserver = parentObserver;
 
                 widget.element = iframe;
                 this._viewerIframe = iframe;
@@ -233,6 +304,9 @@ app.registerExtension({
                 const originalOnRemoved = this.onRemoved;
                 this.onRemoved = function () {
                     resizeObserver.disconnect();
+                    if (this._parentObserver) {
+                        this._parentObserver.disconnect();
+                    }
                     window.removeEventListener('message', onMessage);
                     if (resizeTimeout) {
                         clearTimeout(resizeTimeout);

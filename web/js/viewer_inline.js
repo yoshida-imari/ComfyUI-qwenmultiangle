@@ -35,34 +35,35 @@ export const VIEWER_HTML = `
 
         #prompt-preview {
             position: absolute;
-            top: 8px;
-            left: 8px;
-            right: 8px;
+            top: 10px;
+            left: 10px;
+            right: 10px;
             background: rgba(10, 10, 15, 0.9);
             border: 1px solid rgba(233, 61, 130, 0.3);
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 11px;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
             color: #E93D82;
             backdrop-filter: blur(4px);
             font-family: 'Consolas', 'Monaco', monospace;
             word-break: break-all;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         #info-panel {
             position: absolute;
-            bottom: 8px;
-            left: 8px;
-            right: 8px;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
             background: rgba(10, 10, 15, 0.9);
             border: 1px solid rgba(233, 61, 130, 0.3);
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 11px;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
             color: #e0e0e0;
             display: flex;
             justify-content: space-around;
+            align-items: center;
             backdrop-filter: blur(4px);
         }
 
@@ -72,15 +73,16 @@ export const VIEWER_HTML = `
 
         .param-label {
             color: #888;
-            font-size: 10px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-bottom: 2px;
         }
 
         .param-value {
             color: #E93D82;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 16px;
         }
 
         .param-value.elevation {
@@ -93,11 +95,11 @@ export const VIEWER_HTML = `
 
         #reset-btn {
             position: absolute;
-            right: 8px;
-            bottom: 8px;
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
+            right: 10px;
+            bottom: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
             border: 1px solid rgba(233, 61, 130, 0.4);
             background: rgba(10, 10, 15, 0.8);
             color: #E93D82;
@@ -105,7 +107,7 @@ export const VIEWER_HTML = `
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 18px;
             transition: all 0.2s ease;
         }
 
