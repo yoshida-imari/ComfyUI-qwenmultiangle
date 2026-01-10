@@ -1,7 +1,7 @@
 // Internationalization module for the camera widget
 import { app } from '../../../scripts/app.js'
 
-export type Locale = 'en' | 'zh'
+export type Locale = 'en' | 'zh' | 'ja' | 'ko'
 
 export interface Translations {
   // Dropdown labels
@@ -94,6 +94,66 @@ const translations: Record<Locale, Translations> = {
     wideShot: '远景',
     mediumShot: '中景',
     closeUp: '特写'
+  },
+  ja: {
+    // Dropdown labels
+    horizontal: '水平',
+    vertical: '垂直',
+    zoom: '距離',
+    // Info panel labels
+    horizontalFull: '水平角度',
+    verticalFull: '垂直角度',
+    zoomFull: '距離',
+    // Reset button
+    resetToDefaults: 'デフォルトにリセット',
+    // Azimuth options
+    frontView: '正面',
+    frontRightQuarterView: '右前方',
+    rightSideView: '右側面',
+    backRightQuarterView: '右後方',
+    backView: '背面',
+    backLeftQuarterView: '左後方',
+    leftSideView: '左側面',
+    frontLeftQuarterView: '左前方',
+    // Elevation options
+    lowAngleShot: 'ローアングル',
+    eyeLevelShot: 'アイレベル',
+    elevatedShot: 'ハイアングル',
+    highAngleShot: '俯瞰',
+    // Distance options
+    wideShot: 'ワイドショット',
+    mediumShot: 'ミディアムショット',
+    closeUp: 'クローズアップ'
+  },
+  ko: {
+    // Dropdown labels
+    horizontal: '수평',
+    vertical: '수직',
+    zoom: '거리',
+    // Info panel labels
+    horizontalFull: '수평 각도',
+    verticalFull: '수직 각도',
+    zoomFull: '거리',
+    // Reset button
+    resetToDefaults: '기본값으로 재설정',
+    // Azimuth options
+    frontView: '정면',
+    frontRightQuarterView: '우측 전방',
+    rightSideView: '우측면',
+    backRightQuarterView: '우측 후방',
+    backView: '후면',
+    backLeftQuarterView: '좌측 후방',
+    leftSideView: '좌측면',
+    frontLeftQuarterView: '좌측 전방',
+    // Elevation options
+    lowAngleShot: '로우 앵글',
+    eyeLevelShot: '아이 레벨',
+    elevatedShot: '하이 앵글',
+    highAngleShot: '부감',
+    // Distance options
+    wideShot: '와이드 샷',
+    mediumShot: '미디엄 샷',
+    closeUp: '클로즈업'
   }
 }
 
@@ -117,6 +177,14 @@ export function detectLocale(): Locale {
         console.log('[QwenMultiangle i18n] Using Chinese (from ComfyUI setting)')
         return 'zh'
       }
+      if (localeStr.startsWith('ja')) {
+        console.log('[QwenMultiangle i18n] Using Japanese (from ComfyUI setting)')
+        return 'ja'
+      }
+      if (localeStr.startsWith('ko')) {
+        console.log('[QwenMultiangle i18n] Using Korean (from ComfyUI setting)')
+        return 'ko'
+      }
       // Any other locale (en, fr, de, etc.) defaults to English
       console.log('[QwenMultiangle i18n] Using English (from ComfyUI setting)')
       return 'en'
@@ -132,6 +200,14 @@ export function detectLocale(): Locale {
   if (browserLang.startsWith('zh')) {
     console.log('[QwenMultiangle i18n] Using Chinese (from browser)')
     return 'zh'
+  }
+  if (browserLang.startsWith('ja')) {
+    console.log('[QwenMultiangle i18n] Using Japanese (from browser)')
+    return 'ja'
+  }
+  if (browserLang.startsWith('ko')) {
+    console.log('[QwenMultiangle i18n] Using Korean (from browser)')
+    return 'ko'
   }
 
   console.log('[QwenMultiangle i18n] Using English (default)')
