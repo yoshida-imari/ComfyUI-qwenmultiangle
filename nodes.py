@@ -35,7 +35,7 @@ class QwenMultiangleCameraNode:
                 "vertical_angle": ("INT", {
                     "default": 0,
                     "min": -30,
-                    "max": 90,
+                    "max": 60,
                     "step": 1,
                     "display": "slider"
                 }),
@@ -46,7 +46,12 @@ class QwenMultiangleCameraNode:
                     "step": 0.1,
                     "display": "slider"
                 }),
+                # Deprecated: this option no longer affects output, kept for backward compatibility
                 "default_prompts": ("BOOLEAN", {
+                    "default": True,
+                    "display": "checkbox"
+                }),
+                "camera_view": ("BOOLEAN", {
                     "default": False,
                     "display": "checkbox"
                 }),
@@ -87,10 +92,11 @@ class QwenMultiangleCameraNode:
         except Exception:
             return str(hash(str(image)))
 
-    def generate_prompt(self, horizontal_angle, vertical_angle, zoom, default_prompts=False, image=None, unique_id=None):
+    def generate_prompt(self, horizontal_angle, vertical_angle, zoom, default_prompts=True, camera_view=False, image=None, unique_id=None):
+        # Note: default_prompts is deprecated and ignored, kept for backward compatibility
         # Validate input ranges
         horizontal_angle = max(0, min(360, int(horizontal_angle)))
-        vertical_angle = max(-30, min(90, int(vertical_angle)))
+        vertical_angle = max(-30, min(60, int(vertical_angle)))
         zoom = max(0.0, min(10.0, float(zoom)))
 
         # Check cache for unchanged inputs
@@ -101,92 +107,49 @@ class QwenMultiangleCameraNode:
         if (cached.get('horizontal_angle') == horizontal_angle and
             cached.get('vertical_angle') == vertical_angle and
             cached.get('zoom') == zoom and
-            cached.get('default_prompts') == default_prompts and
             cached.get('image_hash') == image_hash):
             # Return cached result without recomputing
             return cached['result']
 
         h_angle = horizontal_angle % 360
 
-        if default_prompts:
-            # Qwen-style prompts format
-            if h_angle < 22.5 or h_angle >= 337.5:
-                h_direction = "front view"
-            elif h_angle < 67.5:
-                h_direction = "front-right quarter view"
-            elif h_angle < 112.5:
-                h_direction = "right side view"
-            elif h_angle < 157.5:
-                h_direction = "back-right quarter view"
-            elif h_angle < 202.5:
-                h_direction = "back view"
-            elif h_angle < 247.5:
-                h_direction = "back-left quarter view"
-            elif h_angle < 292.5:
-                h_direction = "left side view"
-            else:
-                h_direction = "front-left quarter view"
-
-            if vertical_angle < -15:
-                v_direction = "low-angle shot"
-            elif vertical_angle < 15:
-                v_direction = "eye-level shot"
-            elif vertical_angle < 75:
-                v_direction = "elevated shot"
-            else:
-                v_direction = "high-angle shot"
-
-            if zoom < 2:
-                distance = "wide shot"
-            elif zoom < 6:
-                distance = "medium shot"
-            else:
-                distance = "close-up"
-
-            prompt = f"{h_direction} {v_direction} {distance}"
+        # Azimuth (horizontal) - 8 directions
+        if h_angle < 22.5 or h_angle >= 337.5:
+            h_direction = "front view"
+        elif h_angle < 67.5:
+            h_direction = "front-right quarter view"
+        elif h_angle < 112.5:
+            h_direction = "right side view"
+        elif h_angle < 157.5:
+            h_direction = "back-right quarter view"
+        elif h_angle < 202.5:
+            h_direction = "back view"
+        elif h_angle < 247.5:
+            h_direction = "back-left quarter view"
+        elif h_angle < 292.5:
+            h_direction = "left side view"
         else:
-            # Default format
-            if h_angle < 22.5 or h_angle >= 337.5:
-                h_direction = "front view"
-            elif h_angle < 67.5:
-                h_direction = "front-right view"
-            elif h_angle < 112.5:
-                h_direction = "right side view"
-            elif h_angle < 157.5:
-                h_direction = "back-right view"
-            elif h_angle < 202.5:
-                h_direction = "back view"
-            elif h_angle < 247.5:
-                h_direction = "back-left view"
-            elif h_angle < 292.5:
-                h_direction = "left side view"
-            else:
-                h_direction = "front-left view"
+            h_direction = "front-left quarter view"
 
-            if vertical_angle < -15:
-                v_direction = "low angle"
-            elif vertical_angle < 15:
-                v_direction = "eye level"
-            elif vertical_angle < 45:
-                v_direction = "high angle"
-            elif vertical_angle < 75:
-                v_direction = "bird's eye view"
-            else:
-                v_direction = "top-down view"
+        # Elevation (vertical) - 4 levels: -30°, 0°, 30°, 60°
+        if vertical_angle < -15:
+            v_direction = "low-angle shot"
+        elif vertical_angle < 15:
+            v_direction = "eye-level shot"
+        elif vertical_angle < 45:
+            v_direction = "elevated shot"
+        else:
+            v_direction = "high-angle shot"
 
-            if zoom < 2:
-                distance = "wide shot"
-            elif zoom < 4:
-                distance = "medium-wide shot"
-            elif zoom < 6:
-                distance = "medium shot"
-            elif zoom < 8:
-                distance = "medium close-up"
-            else:
-                distance = "close-up"
+        # Distance - 3 levels
+        if zoom < 2:
+            distance = "wide shot"
+        elif zoom < 6:
+            distance = "medium shot"
+        else:
+            distance = "close-up"
 
-            prompt = f"{h_direction}, {v_direction}, {distance}"
-            prompt += f" (horizontal: {horizontal_angle}, vertical: {vertical_angle}, zoom: {zoom:.1f})"
+        prompt = f"<sks> {h_direction} {v_direction} {distance}"
 
         # Convert image to base64 for frontend display
         image_base64 = ""
@@ -235,7 +198,6 @@ class QwenMultiangleCameraNode:
             'horizontal_angle': horizontal_angle,
             'vertical_angle': vertical_angle,
             'zoom': zoom,
-            'default_prompts': default_prompts,
             'image_hash': image_hash,
             'result': result
         }
@@ -250,7 +212,7 @@ class QwenMultiangleCameraNode:
         return result
 
     @classmethod
-    def IS_CHANGED(cls, horizontal_angle, vertical_angle, zoom, default_prompts=False, image=None, unique_id=None):
+    def IS_CHANGED(cls, horizontal_angle, vertical_angle, zoom, default_prompts=True, camera_view=False, image=None, unique_id=None):
         # Return a hash of inputs so node only re-runs when inputs actually change
         try:
             img_hash = ""
@@ -267,9 +229,9 @@ class QwenMultiangleCameraNode:
                     if len(img_np.shape) == 4:
                         img_np = img_np[0]
                 img_hash = hashlib.md5(img_np.tobytes()).hexdigest()
-            return f"{horizontal_angle}_{vertical_angle}_{zoom}_{default_prompts}_{img_hash}"
+            return f"{horizontal_angle}_{vertical_angle}_{zoom}_{img_hash}"
         except Exception:
-            return f"{horizontal_angle}_{vertical_angle}_{zoom}_{default_prompts}"
+            return f"{horizontal_angle}_{vertical_angle}_{zoom}"
 
 
 NODE_CLASS_MAPPINGS = {
