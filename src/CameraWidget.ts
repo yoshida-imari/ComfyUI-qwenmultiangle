@@ -514,22 +514,54 @@ export class CameraWidget {
   private bindEvents(): void {
     const canvas = this.renderer.domElement
 
-    canvas.addEventListener('mousedown', this.onPointerDown.bind(this))
-    canvas.addEventListener('mousemove', this.onPointerMove.bind(this))
-    canvas.addEventListener('mouseup', this.onPointerUp.bind(this))
-    canvas.addEventListener('mouseleave', this.onPointerUp.bind(this))
+    // Use pointer events for better Node 2.0 compatibility
+    canvas.addEventListener('pointerdown', (e) => {
+      e.stopPropagation()
+      e.preventDefault()
+      this.onPointerDown(e)
+      // Capture pointer to prevent ComfyUI node drag
+      canvas.setPointerCapture(e.pointerId)
+    })
 
+    canvas.addEventListener('pointermove', (e) => {
+      if (this.isDragging) {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+      this.onPointerMove(e)
+    })
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId)
+      }
+      this.onPointerUp()
+    })
+
+    canvas.addEventListener('pointerleave', (e) => {
+      if (canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId)
+      }
+      this.onPointerUp()
+    })
+
+    // Touch events as fallback
     canvas.addEventListener('touchstart', (e) => {
+      e.stopPropagation()
       e.preventDefault()
       this.onPointerDown({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY } as MouseEvent)
     }, { passive: false })
 
     canvas.addEventListener('touchmove', (e) => {
+      e.stopPropagation()
       e.preventDefault()
       this.onPointerMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY } as MouseEvent)
     }, { passive: false })
 
-    canvas.addEventListener('touchend', () => this.onPointerUp())
+    canvas.addEventListener('touchend', (e) => {
+      e.stopPropagation()
+      this.onPointerUp()
+    })
 
     // Resize observer
     const resizeObserver = new ResizeObserver(() => {
